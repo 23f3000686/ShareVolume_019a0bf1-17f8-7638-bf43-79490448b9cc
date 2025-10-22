@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .data {
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .data p {
+            margin: 10px 0;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="entity-title">Loading...</h1>
+    <div class="data">
+        <p><span id="share-entity-name" class="highlight">Entity Name: Loading...</span></p>
+        <p>Max Shares Outstanding: <span id="share-max-value" class="highlight">Loading...</span> (FY: <span id="share-max-fy" class="highlight">Loading...</span>)</p>
+        <p>Min Shares Outstanding: <span id="share-min-value" class="highlight">Loading...</span> (FY: <span id="share-min-fy" class="highlight">Loading...</span>)</p>
+    </div>
+    <script>
+        async function fetchData(cik) {
+            const response = await fetch(`https://data.sec.gov/api/xbrl/companyconcept/CIK${cik}/dei/EntityCommonStockSharesOutstanding.json`, {
+                headers: {
+                    "User-Agent": "YourAppName/1.0 (your.email@example.com)"
+                }
+            });
+            const data = await response.json();
+            return data;
+        }
+
+        function processEntityData(data) {
+            const entityName = data.entityName;
+            const units = data.units.shares || [];
+            const filteredUnits = units.filter(unit => unit.fy > "2020" && !isNaN(unit.val));
+            
+            const max = filteredUnits.reduce((prev, current) => (current.val > prev.val) ? current : prev);
+            const min = filteredUnits.reduce((prev, current) => (current.val < prev.val) ? current : prev);
+            
+            return {
+                entityName,
+                max,
+                min
+            };
+        }
+
+        function updateDOM(entityData) {
+            document.getElementById('entity-title').innerText = entityData.entityName;
+            document.getElementById('share-entity-name').innerText = entityData.entityName;
+            document.getElementById('share-max-value').innerText = entityData.max.val;
+            document.getElementById('share-max-fy').innerText = entityData.max.fy;
+            document.getElementById('share-min-value').innerText = entityData.min.val;
+            document.getElementById('share-min-fy').innerText = entityData.min.fy;
+        }
+
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const cikParam = urlParams.get('CIK') || '0000796343';
+            const data = await fetchData(cikParam);
+            const entityData = processEntityData(data);
+            updateDOM(entityData);
+        }
+        
+        init();
+    </script>
+    <script src="uid.txt"></script>
+</body>
+</html>
